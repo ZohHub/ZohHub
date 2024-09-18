@@ -1,0 +1,437 @@
+-- zhub
+-- Define UI
+local ScreenGui = Instance.new("ScreenGui")
+local MainFrame = Instance.new("Frame")
+local Buttons = {}
+local TeleportBackPosition = nil
+
+-- Set up the ScreenGui
+ScreenGui.Name = "zhub"
+ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+MainFrame.Parent = ScreenGui
+MainFrame.Size = UDim2.new(0, 220, 0, 400)
+MainFrame.Position = UDim2.new(0, 10, 0, 10)
+MainFrame.BackgroundColor3 = Color3.new(0.1, 0.1, 0.1)
+MainFrame.BorderSizePixel = 0
+
+-- Create buttons
+local buttonNames = {"ESP", "Fly", "Noclip", "Fling", "Teleport"}
+for i, name in ipairs(buttonNames) do
+	local Button = Instance.new("TextButton")
+	Button.Parent = MainFrame
+	Button.Size = UDim2.new(0, 200, 0, 30)
+	Button.Position = UDim2.new(0, 10, 0, (i - 1) * 35 + 10)
+	Button.Text = name
+	Button.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
+	Button.TextColor3 = Color3.new(1, 1, 1)
+	Button.BorderSizePixel = 0
+	table.insert(Buttons, Button)
+end
+
+-- ESP Functionality
+local function createESP(player)
+	local billboard = Instance.new("BillboardGui")
+	local nameTag = Instance.new("TextLabel")
+
+	billboard.Parent = player.Character.Head
+	billboard.Size = UDim2.new(0, 100, 0, 50)
+	billboard.Adornee = player.Character.Head
+	billboard.AlwaysOnTop = true
+
+	nameTag.Parent = billboard
+	nameTag.Size = UDim2.new(1, 0, 1, 0)
+	nameTag.BackgroundTransparency = 1
+	nameTag.Text = "Enemies"
+	nameTag.TextColor3 = Color3.new(1, 0, 0)
+	nameTag.TextScaled = true
+
+	-- Highlight character parts in red
+	for _, part in ipairs(player.Character:GetChildren()) do
+		if part:IsA("BasePart") then
+			part.BrickColor = BrickColor.new("Bright red")
+		end
+	end
+end
+
+local function applyESP()
+	for _, player in ipairs(game.Players:GetPlayers()) do
+		if player ~= game.Players.LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
+			createESP(player)
+		end
+	end
+end
+
+-- zhub Fly Control with Enhanced GUI and Smooth Flying Mechanics
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+local camera = workspace.CurrentCamera
+
+local flying = false
+local speed = 50 -- Initial speed of flying
+local maxSpeed = 100000000 -- Max speed level
+local minSpeed = 1 -- Min speed level
+
+-- Fly components initialized when needed
+local bodyGyro, bodyVelocity
+local flyConnection
+
+-- GUI components
+local guiVisible = true
+local minimized = false
+
+-- Create GUI
+local ScreenGui = Instance.new("ScreenGui")
+local FlyFrame = Instance.new("Frame")
+local HideButton = Instance.new("TextButton")
+local SpeedLabel = Instance.new("TextLabel")
+local IncreaseSpeedButton = Instance.new("TextButton")
+local DecreaseSpeedButton = Instance.new("TextButton")
+local UpButton = Instance.new("TextButton")
+local DownButton = Instance.new("TextButton")
+local MinimizeButton = Instance.new("TextButton")
+local FlyButton = Instance.new("TextButton")
+
+-- Styling the GUI
+local function styleButton(button)
+	button.Size = UDim2.new(0, 80, 0, 30)
+	button.BackgroundColor3 = Color3.new(0.15, 0.15, 0.15)
+	button.TextColor3 = Color3.new(1, 1, 1)
+	button.Font = Enum.Font.SourceSansBold
+	button.TextSize = 18
+	button.BorderSizePixel = 0
+	button.BackgroundTransparency = 0.1
+	button.AutoButtonColor = false
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 8)
+	corner.Parent = button
+end
+
+-- Setting up GUI
+ScreenGui.Name = "FlyControlGui"
+ScreenGui.Parent = player:WaitForChild("PlayerGui")
+
+FlyFrame.Parent = ScreenGui
+FlyFrame.Size = UDim2.new(0, 220, 0, 300)
+FlyFrame.Position = UDim2.new(0.5, -110, 0.5, -150)
+FlyFrame.BackgroundColor3 = Color3.new(0.1, 0.1, 0.1)
+FlyFrame.BorderSizePixel = 0
+FlyFrame.Active = true
+FlyFrame.Draggable = true
+FlyFrame.Visible = true
+local frameCorner = Instance.new("UICorner")
+frameCorner.CornerRadius = UDim.new(0, 8)
+frameCorner.Parent = FlyFrame
+
+SpeedLabel.Parent = FlyFrame
+SpeedLabel.Size = UDim2.new(0, 200, 0, 40)
+SpeedLabel.Position = UDim2.new(0, 10, 0, 10)
+SpeedLabel.Text = "Fly Speed: " .. speed
+SpeedLabel.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
+SpeedLabel.TextColor3 = Color3.new(1, 1, 1)
+SpeedLabel.TextScaled = true
+SpeedLabel.Font = Enum.Font.SourceSansBold
+local speedLabelCorner = Instance.new("UICorner")
+speedLabelCorner.CornerRadius = UDim.new(0, 8)
+speedLabelCorner.Parent = SpeedLabel
+
+-- Button setup
+styleButton(IncreaseSpeedButton)
+styleButton(DecreaseSpeedButton)
+styleButton(UpButton)
+styleButton(DownButton)
+styleButton(HideButton)
+styleButton(MinimizeButton)
+styleButton(FlyButton)
+
+IncreaseSpeedButton.Parent = FlyFrame
+IncreaseSpeedButton.Position = UDim2.new(0, 10, 0, 60)
+IncreaseSpeedButton.Text = "+"
+
+DecreaseSpeedButton.Parent = FlyFrame
+DecreaseSpeedButton.Position = UDim2.new(0.55, 0, 0, 60)
+DecreaseSpeedButton.Text = "-"
+
+UpButton.Parent = FlyFrame
+UpButton.Position = UDim2.new(0, 10, 0, 100)
+UpButton.Text = "Up"
+
+DownButton.Parent = FlyFrame
+DownButton.Position = UDim2.new(0.55, 0, 0, 100)
+DownButton.Text = "Down"
+
+HideButton.Parent = FlyFrame
+HideButton.Size = UDim2.new(0, 200, 0, 30)
+HideButton.Position = UDim2.new(0, 10, 0, 150)
+HideButton.Text = "Hide GUI"
+
+FlyButton.Parent = FlyFrame
+FlyButton.Size = UDim2.new(0, 200, 0, 30)
+FlyButton.Position = UDim2.new(0, 10, 0, 190)
+FlyButton.Text = "Start Flying"
+
+MinimizeButton.Parent = ScreenGui
+MinimizeButton.Size = UDim2.new(0, 50, 0, 50)
+MinimizeButton.Position = UDim2.new(0.5, -25, 0.5, -25)
+MinimizeButton.Text = "-"
+MinimizeButton.Visible = false
+MinimizeButton.BackgroundColor3 = Color3.new(0.5, 0.5, 0.5)
+
+-- Function to start flying
+local function startFlying()
+	if not flying then
+		flying = true
+
+		-- Initialize BodyGyro and BodyVelocity only when flying is activated
+		bodyGyro = Instance.new("BodyGyro")
+		bodyVelocity = Instance.new("BodyVelocity")
+
+		bodyGyro.CFrame = character.PrimaryPart.CFrame
+		bodyGyro.MaxTorque = Vector3.new(400000, 400000, 400000)
+		bodyGyro.P = 4000
+		bodyGyro.Parent = character.PrimaryPart
+
+		bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+		bodyVelocity.MaxForce = Vector3.new(100000, 100000, 100000)
+		bodyVelocity.Parent = character.PrimaryPart
+
+		-- Smooth movement handling during flight
+		flyConnection = game:GetService("RunService").Heartbeat:Connect(function()
+			if flying then
+				local direction = Vector3.new(0, 0, 0)
+
+				-- Flying using player's move direction
+				local moveDirection = humanoid.MoveDirection * speed
+				direction = direction + moveDirection
+
+				-- First-person control for up and down
+				local cameraLookVector = workspace.CurrentCamera.CFrame.LookVector
+				if math.abs(cameraLookVector.Y) > 0.1 then
+					direction = direction + Vector3.new(0, cameraLookVector.Y * speed, 0)
+				end
+
+				-- Smooth interpolation for body velocity
+				bodyVelocity.Velocity = bodyVelocity.Velocity:Lerp(direction, 0.5)
+				bodyGyro.CFrame = workspace.CurrentCamera.CFrame
+			end
+		end)
+	end
+end
+
+-- Function to stop flying
+local function stopFlying()
+	if flying then
+		flying = false
+		bodyVelocity:Destroy()
+		bodyGyro:Destroy()
+		flyConnection:Disconnect()
+	end
+end
+
+-- Check if player is in first-person mode
+local function isFirstPerson()
+	return camera.CameraSubject == character.Humanoid and camera.FieldOfView < 70
+end
+
+-- Toggle fly (only called when the fly button is pressed)
+FlyButton.MouseButton1Click:Connect(function()
+	if flying then
+		FlyButton.Text = "Start Flying"
+		stopFlying()
+	else
+		FlyButton.Text = "Stop Flying"
+		startFlying()
+	end
+end)
+
+-- Function to update speed label
+local function updateSpeedLabel()
+	SpeedLabel.Text = "Fly Speed: " .. speed
+end
+
+-- Increase speed
+IncreaseSpeedButton.MouseButton1Click:Connect(function()
+	if speed < maxSpeed then
+		speed = speed + 10
+		updateSpeedLabel()
+	end
+end)
+
+-- Decrease speed
+DecreaseSpeedButton.MouseButton1Click:Connect(function()
+	if speed > minSpeed then
+		speed = speed - 10
+		updateSpeedLabel()
+	end
+end)
+
+-- Move up
+UpButton.MouseButton1Click:Connect(function()
+	if flying and isFirstPerson() then
+		bodyVelocity.Velocity = bodyVelocity.Velocity + Vector3.new(0, speed, 0)
+	elseif not isFirstPerson() then
+		warn("You must be in first-person mode to use the Up button.")
+	end
+end)
+
+-- Move down
+DownButton.MouseButton1Click:Connect(function()
+	if flying and isFirstPerson() then
+		bodyVelocity.Velocity = bodyVelocity.Velocity - Vector3.new(0, speed, 0)
+	elseif not isFirstPerson() then
+		warn("You must be in first-person mode to use the Down button.")
+	end
+end)
+
+-- Hide GUI and show minimize button
+HideButton.MouseButton1Click:Connect(function()
+	FlyFrame.Visible = false
+	MinimizeButton.Visible = true
+end)
+
+-- Show GUI again
+MinimizeButton.MouseButton1Click:Connect(function()
+	FlyFrame.Visible = true
+	MinimizeButton.Visible = false
+end)
+
+-- Draggable even when minimized
+MinimizeButton.Draggable = true
+FlyFrame.Draggable = true
+
+-- Noclip Functionality
+local noclip = false
+local function toggleNoclip()
+	noclip = not noclip
+	local character = game.Players.LocalPlayer.Character
+
+	if noclip then
+		for _, part in ipairs(character:GetDescendants()) do
+			if part:IsA("BasePart") then
+				part.CanCollide = false
+			end
+		end
+	else
+		for _, part in ipairs(character:GetDescendants()) do
+			if part:IsA("BasePart") then
+				part.CanCollide = true
+			end
+		end
+	end
+end
+
+-- Fling Functionality
+local function fling()
+	local player = game.Players.LocalPlayer
+	local character = player.Character
+
+	local bodyAngularVelocity = Instance.new("BodyAngularVelocity")
+	bodyAngularVelocity.Parent = character.PrimaryPart
+	bodyAngularVelocity.AngularVelocity = Vector3.new(0, math.rad(1000), 0)
+	bodyAngularVelocity.MaxTorque = Vector3.new(100000, 100000, 100000)
+
+	wait(0.1)
+	bodyAngularVelocity:Destroy()
+end
+
+-- Teleport Functionality with confirmation dialog
+local function teleportTo(location)
+	local player = game.Players.LocalPlayer
+	player.Character:SetPrimaryPartCFrame(CFrame.new(location))
+end
+
+local function showTeleportBackDialog()
+	local backGui = Instance.new("ScreenGui")
+	local backFrame = Instance.new("Frame")
+	local yesButton = Instance.new("TextButton")
+	local noButton = Instance.new("TextButton")
+
+	backGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+	backFrame.Parent = backGui
+	backFrame.Size = UDim2.new(0, 200, 0, 100)
+	backFrame.Position = UDim2.new(0.5, -100, 1, -150)
+	backFrame.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
+
+	yesButton.Parent = backFrame
+	yesButton.Size = UDim2.new(0, 80, 0, 30)
+	yesButton.Position = UDim2.new(0.1, 0, 0.5, -15)
+	yesButton.Text = "Yes"
+	yesButton.BackgroundColor3 = Color3.new(0, 1, 0)
+
+	noButton.Parent = backFrame
+	noButton.Size = UDim2.new(0, 80, 0, 30)
+	noButton.Position = UDim2.new(0.55, 0, 0.5, -15)
+	noButton.Text = "No"
+	noButton.BackgroundColor3 = Color3.new(1, 0, 0)
+
+	yesButton.MouseButton1Click:Connect(function()
+		teleportTo(TeleportBackPosition)
+		backGui:Destroy()
+	end)
+
+	noButton.MouseButton1Click:Connect(function()
+		backGui:Destroy()
+	end)
+end
+
+local function showTeleportDialog(hitPosition)
+	local teleportGui = Instance.new("ScreenGui")
+	local teleportFrame = Instance.new("Frame")
+	local yesButton = Instance.new("TextButton")
+	local noButton = Instance.new("TextButton")
+
+	teleportGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+	teleportFrame.Parent = teleportGui
+	teleportFrame.Size = UDim2.new(0, 200, 0, 100)
+	teleportFrame.Position = UDim2.new(0.5, -100, 0.5, -50)
+	teleportFrame.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
+
+	yesButton.Parent = teleportFrame
+	yesButton.Size = UDim2.new(0, 80, 0, 30)
+	yesButton.Position = UDim2.new(0.1, 0, 0.5, -15)
+	yesButton.Text = "Yes"
+	yesButton.BackgroundColor3 = Color3.new(0, 1, 0)
+
+	noButton.Parent = teleportFrame
+	noButton.Size = UDim2.new(0, 80, 0, 30)
+	noButton.Position = UDim2.new(0.55, 0, 0.5, -15)
+	noButton.Text = "No"
+	noButton.BackgroundColor3 = Color3.new(1, 0, 0)
+
+	yesButton.MouseButton1Click:Connect(function()
+		TeleportBackPosition = game.Players.LocalPlayer.Character.PrimaryPart.Position
+		teleportTo(hitPosition)
+		showTeleportBackDialog()
+		teleportGui:Destroy()
+	end)
+
+	noButton.MouseButton1Click:Connect(function()
+		teleportGui:Destroy()
+	end)
+end
+
+-- Mouse click teleport setup
+local function setupTeleport()
+	local player = game.Players.LocalPlayer
+	local mouse = player:GetMouse()
+
+	mouse.Button1Down:Connect(function()
+		if mouse.Target then
+			showTeleportDialog(mouse.Hit.p)
+		end
+	end)
+end
+
+-- Button actions
+Buttons[1].MouseButton1Click:Connect(applyESP)
+Buttons[2].MouseButton1Click:Connect(toggleFly)
+Buttons[3].MouseButton1Click:Connect(toggleNoclip)
+Buttons[4].MouseButton1Click:Connect(fling)
+Buttons[5].MouseButton1Click:Connect(setupTeleport)
+
+-- Add player added event for ESP
+game.Players.PlayerAdded:Connect(function(player)
+	player.CharacterAdded:Connect(function(character)
+		createESP(player)
+	end)
+end)
