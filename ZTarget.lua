@@ -1,1 +1,1 @@
-loadstring(game:HttpGet("https://raw.githubusercontent.com/ZohHub/ZohHub/refs/heads/ZHub/ZTarget.lua"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/ZohHub/ZohHub/refs/heads/ZHub/TARGETSCRIPT.lua"))()
