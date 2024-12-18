@@ -1,141 +1,168 @@
+-- LocalScript inside StarterPlayerScripts
+
 local player = game.Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
+local mouse = player:GetMouse()
 
--- Create ScreenGui for the Target System
-local targetGui = Instance.new("ScreenGui")
-targetGui.Name = "TargetGui"
-targetGui.Parent = playerGui
+-- Create the GUI
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "Target"
+screenGui.Parent = player:WaitForChild("PlayerGui")
 
--- Create the main frame for the Target GUI
-local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 300, 0, 400)
-mainFrame.Position = UDim2.new(0.5, -150, 0.5, -200)
-mainFrame.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
-mainFrame.BorderSizePixel = 0
-mainFrame.Parent = targetGui
+local frame = Instance.new("Frame")
+frame.Name = "MainFrame"
+frame.Size = UDim2.new(0, 300, 0, 400)
+frame.Position = UDim2.new(0, 50, 0, 50)
+frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+frame.BorderSizePixel = 0
+frame.Parent = screenGui
 
--- Add corner rounding
-local mainCorner = Instance.new("UICorner")
-mainCorner.CornerRadius = UDim.new(0, 8)
-mainCorner.Parent = mainFrame
+local titleBar = Instance.new("Frame")
+titleBar.Name = "TitleBar"
+titleBar.Size = UDim2.new(1, 0, 0, 30)
+titleBar.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+titleBar.Parent = frame
 
--- Title label for the GUI
 local titleLabel = Instance.new("TextLabel")
-titleLabel.Text = "Target Control"
-titleLabel.Size = UDim2.new(1, 0, 0, 50)
-titleLabel.Position = UDim2.new(0, 0, 0, 0)
-titleLabel.BackgroundColor3 = Color3.new(0.1, 0.1, 0.1)
-titleLabel.TextColor3 = Color3.new(1, 1, 1)
-titleLabel.Font = Enum.Font.SourceSansBold
-titleLabel.TextSize = 24
-titleLabel.Parent = mainFrame
+titleLabel.Text = "Target GUI"
+titleLabel.Size = UDim2.new(1, 0, 1, 0)
+titleLabel.BackgroundTransparency = 1
+titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleLabel.TextSize = 18
+titleLabel.TextXAlignment = Enum.TextXAlignment.Center
+titleLabel.Parent = titleBar
 
--- Input box for the target username
-local targetInput = Instance.new("TextBox")
-targetInput.PlaceholderText = "Enter Username"
-targetInput.Size = UDim2.new(0.8, 0, 0, 40)
-targetInput.Position = UDim2.new(0.1, 0, 0, 60)
-targetInput.BackgroundColor3 = Color3.new(0.3, 0.3, 0.3)
-targetInput.TextColor3 = Color3.new(1, 1, 1)
-targetInput.Font = Enum.Font.SourceSans
-targetInput.TextSize = 18
-targetInput.ClearTextOnFocus = false
-targetInput.Parent = mainFrame
+-- Draggable Logic
+local dragging = false
+local dragInput = nil
+local dragStart = nil
+local startPos = nil
 
--- Function to style buttons
-local function createButton(text, posY)
+local function updateDrag(input)
+    local delta = input.Position - dragStart
+    frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+
+titleBar.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = frame.Position
+        input.Changed:Connect(function()
+            if dragging then
+                updateDrag(input)
+            end
+        end)
+    end
+end)
+
+titleBar.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = false
+    end
+end)
+
+-- Create the textbox to enter the username
+local usernameBox = Instance.new("TextBox")
+usernameBox.Size = UDim2.new(1, -20, 0, 40)
+usernameBox.Position = UDim2.new(0, 10, 0, 40)
+usernameBox.PlaceholderText = "Enter Target Username"
+usernameBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+usernameBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+usernameBox.ClearTextOnFocus = false
+usernameBox.TextSize = 16
+usernameBox.Parent = frame
+
+-- Buttons for the actions
+local function createActionButton(name, position, action)
     local button = Instance.new("TextButton")
-    button.Text = text
-    button.Size = UDim2.new(0.8, 0, 0, 40)
-    button.Position = UDim2.new(0.1, 0, 0, posY)
-    button.BackgroundColor3 = Color3.new(0.3, 0.3, 0.3)
-    button.TextColor3 = Color3.new(1, 1, 1)
-    button.Font = Enum.Font.SourceSans
-    button.TextSize = 18
-    button.Parent = mainFrame
-    
-    -- Add corner rounding
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 8)
-    corner.Parent = button
-    
-    return button
+    button.Size = UDim2.new(1, -20, 0, 30)
+    button.Position = position
+    button.Text = name
+    button.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    button.TextSize = 14
+    button.Parent = frame
+
+    button.MouseButton1Click:Connect(action)
 end
 
--- Create Action Buttons
-local flingButton = createButton("Fling", 120)
-local killButton = createButton("Kill", 170)
-local teleportButton = createButton("Teleport to Target", 220)
-local viewButton = createButton("View Target", 270)
-local resetButton = createButton("Reset Target", 320)
-
--- Function to find player by username
-local function findPlayerByUsername(username)
-    for _, plr in ipairs(game.Players:GetPlayers()) do
-        if string.lower(plr.Name) == string.lower(username) then
-            return plr
-        end
-    end
-    return nil
+-- Define the action buttons
+local function getTargetPlayer()
+    local targetName = usernameBox.Text
+    return game.Players:FindFirstChild(targetName)
 end
 
--- Fling Function
-flingButton.MouseButton1Click:Connect(function()
-    local targetPlayer = findPlayerByUsername(targetInput.Text)
-    if targetPlayer and targetPlayer.Character then
-        -- Fling the target player by applying a force
-        local humanoidRootPart = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
-        if humanoidRootPart then
-            local bodyVelocity = Instance.new("BodyVelocity")
-            bodyVelocity.Velocity = Vector3.new(1000, 1000, 1000) -- High velocity to fling
-            bodyVelocity.MaxForce = Vector3.new(1000000, 1000000, 1000000)
-            bodyVelocity.Parent = humanoidRootPart
-            
-            -- Remove the velocity after a short time
-            wait(0.1)
-            bodyVelocity:Destroy()
-        end
+-- Teleport to Target
+createActionButton("Teleport to Target", UDim2.new(0, 10, 0, 90), function()
+    local target = getTargetPlayer()
+    if target then
+        player.Character:SetPrimaryPartCFrame(target.Character.PrimaryPart.CFrame)
+    else
+        warn("Player not found!")
     end
 end)
 
--- Kill Function
-killButton.MouseButton1Click:Connect(function()
-    local targetPlayer = findPlayerByUsername(targetInput.Text)
-    if targetPlayer and targetPlayer.Character then
-        -- Kill the target player
-        local humanoid = targetPlayer.Character:FindFirstChild("Humanoid")
-        if humanoid then
-            humanoid.Health = 0
-        end
+-- Teleport Target to Me
+createActionButton("Teleport Target to Me", UDim2.new(0, 10, 0, 130), function()
+    local target = getTargetPlayer()
+    if target then
+        target.Character:SetPrimaryPartCFrame(player.Character.PrimaryPart.CFrame)
+    else
+        warn("Player not found!")
     end
 end)
 
--- Teleport Function
-teleportButton.MouseButton1Click:Connect(function()
-    local targetPlayer = findPlayerByUsername(targetInput.Text)
-    if targetPlayer and targetPlayer.Character then
-        -- Teleport to the target player
-        local targetRootPart = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
-        if targetRootPart and player.Character then
-            player.Character:SetPrimaryPartCFrame(targetRootPart.CFrame + Vector3.new(2, 0, 0)) -- Teleport nearby
-        end
+-- Fling Target
+createActionButton("Fling Target", UDim2.new(0, 10, 0, 170), function()
+    local target = getTargetPlayer()
+    if target then
+        local bodyVelocity = Instance.new("BodyVelocity")
+        bodyVelocity.MaxForce = Vector3.new(100000, 100000, 100000)
+        bodyVelocity.Velocity = Vector3.new(0, 100, 0) -- Fling upwards
+        bodyVelocity.Parent = target.Character.PrimaryPart
+        wait(0.1)
+        bodyVelocity:Destroy()
+    else
+        warn("Player not found!")
     end
 end)
 
--- View Function
-viewButton.MouseButton1Click:Connect(function()
-    local targetPlayer = findPlayerByUsername(targetInput.Text)
-    if targetPlayer and targetPlayer.Character then
-        -- Camera focus on the target player
-        local camera = workspace.CurrentCamera
-        camera.CameraSubject = targetPlayer.Character:FindFirstChild("Humanoid")
+-- Kill Target
+createActionButton("Kill Target", UDim2.new(0, 10, 0, 210), function()
+    local target = getTargetPlayer()
+    if target then
+        target:LoadCharacter() -- Respawns the target player, effectively killing them
+    else
+        warn("Player not found!")
     end
 end)
 
--- Reset Target Button (Optional: To Reset Camera or Actions)
-resetButton.MouseButton1Click:Connect(function()
-    -- Reset camera to the player
-    workspace.CurrentCamera.CameraSubject = player.Character:FindFirstChild("Humanoid")
-    -- Clear the input
-    targetInput.Text = ""
+-- View Target
+createActionButton("View Target", UDim2.new(0, 10, 0, 250), function()
+    local target = getTargetPlayer()
+    if target then
+        player.CameraMode = Enum.CameraMode.Locked
+        player.Character.HumanoidRootPart.CFrame = target.Character.HumanoidRootPart.CFrame
+    else
+        warn("Player not found!")
+    end
+end)
+
+-- Minimize button
+local minimizeButton = Instance.new("TextButton")
+minimizeButton.Size = UDim2.new(0, 40, 0, 30)
+minimizeButton.Position = UDim2.new(1, -40, 0, 0)
+minimizeButton.Text = "-"
+minimizeButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+minimizeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+minimizeButton.TextSize = 18
+minimizeButton.Parent = titleBar
+
+minimizeButton.MouseButton1Click:Connect(function()
+    if frame.Size == UDim2.new(0, 300, 0, 400) then
+        frame.Size = UDim2.new(0, 300, 0, 40) -- Minimized size
+    else
+        frame.Size = UDim2.new(0, 300, 0, 400) -- Original size
+    end
 end)
