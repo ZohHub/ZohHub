@@ -8,6 +8,11 @@ local HomeSection = Instance.new("Frame")
 local OtherSection = Instance.new("Frame")
 local AboutSection = Instance.new("Frame")
 
+local TitleBar = Instance.new("Frame")
+local MinimizeButton = Instance.new("TextButton")
+local FullscreenButton = Instance.new("TextButton")
+local CloseButton = Instance.new("TextButton")
+
 -- Parent UI
 ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
 Frame.Parent = ScreenGui
@@ -18,16 +23,70 @@ AboutButton.Parent = Tabs
 HomeSection.Parent = Frame
 OtherSection.Parent = Frame
 AboutSection.Parent = Frame
+TitleBar.Parent = Frame
+MinimizeButton.Parent = TitleBar
+FullscreenButton.Parent = TitleBar
+CloseButton.Parent = TitleBar
 
 -- UI Properties
 Frame.Size = UDim2.new(0, 400, 0, 300)
 Frame.Position = UDim2.new(0.5, -200, 0.5, -150)
 Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+Frame.BorderSizePixel = 2
+Frame.Active = true
+Frame.Draggable = true
 
 Tabs.Size = UDim2.new(0, 400, 0, 50)
+Tabs.Position = UDim2.new(0, 0, 0, 30)
 Tabs.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 
--- Buttons
+TitleBar.Size = UDim2.new(0, 400, 0, 30)
+TitleBar.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+
+-- Title Bar Buttons
+local function createTitleButton(button, text, pos)
+    button.Size = UDim2.new(0, 30, 0, 30)
+    button.Position = pos
+    button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    button.Text = text
+    button.TextColor3 = Color3.fromRGB(255, 255, 255)
+end
+
+createTitleButton(MinimizeButton, "_", UDim2.new(0, 310, 0, 0))
+createTitleButton(FullscreenButton, "[ ]", UDim2.new(0, 340, 0, 0))
+createTitleButton(CloseButton, "X", UDim2.new(0, 370, 0, 0))
+
+-- Button Functions
+local isMinimized = false
+local isFullscreen = false
+local originalSize = Frame.Size
+local originalPosition = Frame.Position
+
+MinimizeButton.MouseButton1Click:Connect(function()
+    if isMinimized then
+        Frame.Size = originalSize
+    else
+        Frame.Size = UDim2.new(0, 400, 0, 30)
+    end
+    isMinimized = not isMinimized
+end)
+
+FullscreenButton.MouseButton1Click:Connect(function()
+    if isFullscreen then
+        Frame.Size = originalSize
+        Frame.Position = originalPosition
+    else
+        Frame.Size = UDim2.new(1, 0, 1, 0)
+        Frame.Position = UDim2.new(0, 0, 0, 0)
+    end
+    isFullscreen = not isFullscreen
+end)
+
+CloseButton.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
+end)
+
+-- Tab Buttons
 local function createTabButton(button, name, pos, section)
     button.Size = UDim2.new(0, 130, 0, 50)
     button.Position = pos
@@ -49,7 +108,7 @@ createTabButton(AboutButton, "About Us", UDim2.new(0, 270, 0, 0), AboutSection)
 -- Sections
 local function createSection(section)
     section.Size = UDim2.new(0, 400, 0, 250)
-    section.Position = UDim2.new(0, 0, 0, 50)
+    section.Position = UDim2.new(0, 0, 0, 80)
     section.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
     section.Visible = false
 end
@@ -131,10 +190,5 @@ aboutLabel.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
 aboutLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 aboutLabel.TextWrapped = true
 aboutLabel.Text = [[Welcome to the Pyro Playground Hack GUI! 
-
-This script was made to enhance your experience in the game by giving you free access to money, fireworks, spins, and even the Black Market gamepass!
-
-Developed by: [Zoh]
-Discord: discord.gg/wA7KGd2CPF
 Enjoy and have fun!]]
 aboutLabel.Parent = AboutSection
